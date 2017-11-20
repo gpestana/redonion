@@ -3,7 +3,6 @@ package fetcher
 import (
 	"bufio"
 	"fmt"
-	"github.com/gpestana/redonion/processors"
 	"golang.org/x/net/proxy"
 	"io/ioutil"
 	"log"
@@ -19,10 +18,10 @@ type Fetcher struct {
 	proxy      string
 	listPath   string
 	timeout    int
-	processors []processor.Processor
+	outChannel chan string
 }
 
-func New(urlsIn *string, proxy *string, listPath *string, timeout *int, proc []string) (Fetcher, error) {
+func New(urlsIn *string, proxy *string, listPath *string, timeout *int, out chan string) (Fetcher, error) {
 	//do input verification
 	var urls []string
 
@@ -36,41 +35,25 @@ func New(urlsIn *string, proxy *string, listPath *string, timeout *int, proc []s
 		urls = strings.Split(*urlsIn, ",")
 	}
 
-	processors := []processor.Processor{}
-	for _, n := range proc {
-		p, err := processor.New(n)
-		if err != nil {
-			log.Fatal(err)
-		}
-		processors = append(processors, p)
-	}
-
 	return Fetcher{
 		urls:       urls,
 		proxy:      *proxy,
 		listPath:   *listPath,
 		timeout:    *timeout,
-		processors: processors,
+		outChannel: out,
 	}, nil
 }
 
-func (f *Fetcher) Start() []string {
-	channel := make(chan string)
-	var results []string
-
+func (f *Fetcher) Start() {
+	log.Println("Fetcher.Start")
 	for _, u := range f.urls {
+		log.Println("Fetcher.Start: spinning new goroutine " + u)
 		go func(u string) {
+			log.Println("ëxecuting goroutine")
 			r, _ := f.request(u)
-			channel <- r
+			f.outChannel <- r
 		}(u)
 	}
-
-	for range f.urls {
-		r := <-channel
-		results = append(results, r)
-	}
-	close(channel)
-	return results
 }
 
 func parseListURL(p string) ([]string, error) {

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/gpestana/redonion/fetcher"
+	"github.com/gpestana/redonion/processors"
 	"log"
 )
 
@@ -14,14 +15,22 @@ func main() {
 	proxy := flag.String("proxy", "127.0.0.1:9150", "url of tor proxy")
 	flag.Parse()
 
-	processors := []string{"image", "text"}
+	// initializes the pipeline
+	inputChn := make(chan string)
+	textChn := make(chan string)
 
-	fetcher, err := fetcher.New(urls, proxy, list, timeout, processors)
+	processors := []processor.Processor{
+		processor.NewTextProcessor(inputChn, textChn, 2),
+	}
+
+	fetcher, err := fetcher.New(urls, proxy, list, timeout, inputChn)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Println(fetcher)
-	//results := fetcher.Start()
-	//log.Println(results)
+	fetcher.Start()
+
+	for _, p := range processors {
+		p.Process()
+	}
 }
