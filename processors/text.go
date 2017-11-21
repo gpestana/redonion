@@ -23,12 +23,13 @@ func NewTextProcessor(in chan string, out chan string, len int) TextProcessor {
 
 func (p TextProcessor) Process() {
 	log.Println("TextProcessor.Process")
-
 	for i := 0; i < p.inputLenght; i++ {
 		msg := <-p.inChannel
-		log.Println(msg)
+		log.Println(len(msg))
+
+		// pass to next processing unit
+		p.outChannel <- msg
 	}
-	//close(p.inChannel)
 }
 
 func (p TextProcessor) Stop() error {
