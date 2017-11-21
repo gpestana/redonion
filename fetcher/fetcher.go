@@ -2,6 +2,7 @@ package fetcher
 
 import (
 	"fmt"
+	"github.com/gpestana/redonion/processors"
 	"golang.org/x/net/proxy"
 	"io/ioutil"
 	"log"
@@ -14,16 +15,16 @@ type Fetcher struct {
 	urls       []string
 	proxy      string
 	timeout    int
-	outChannel chan string
+	processors []processor.Processor
 }
 
-func New(urls []string, proxy *string, timeout *int, out chan string) (Fetcher, error) {
+func New(urls []string, proxy *string, timeout *int, pr []processor.Processor) (Fetcher, error) {
 	//do input verification
 	return Fetcher{
 		urls:       urls,
 		proxy:      *proxy,
 		timeout:    *timeout,
-		outChannel: out,
+		processors: pr,
 	}, nil
 }
 
@@ -33,7 +34,11 @@ func (f *Fetcher) Start() {
 		log.Println("Fetcher.Start: spinning new goroutine " + u)
 		go func(u string) {
 			r, _ := f.request(u)
-			f.outChannel <- r
+			// fan-out result from fetcher to all registerd processors
+			for _, p := range f.processors {
+				du := processor.DataUnit{&p, r}
+				p.InChannel() <- du
+			}
 		}(u)
 	}
 }

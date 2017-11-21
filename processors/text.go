@@ -6,13 +6,12 @@ import (
 
 type TextProcessor struct {
 	name        string
-	next        *Processor
-	inChannel   chan string
-	outChannel  chan string
+	inChannel   chan DataUnit
+	outChannel  chan DataUnit
 	inputLenght int
 }
 
-func NewTextProcessor(in chan string, out chan string, len int) TextProcessor {
+func NewTextProcessor(in chan DataUnit, out chan DataUnit, len int) TextProcessor {
 	return TextProcessor{
 		name:        "text",
 		inChannel:   in,
@@ -24,15 +23,22 @@ func NewTextProcessor(in chan string, out chan string, len int) TextProcessor {
 func (p TextProcessor) Process() {
 	log.Println("TextProcessor.Process")
 	for i := 0; i < p.inputLenght; i++ {
-		msg := <-p.inChannel
-		log.Println(len(msg))
+		du := DataUnit{}
+		du = <-p.inChannel
 
 		// pass to next processing unit
-		p.outChannel <- msg
+		p.outChannel <- du
 	}
 }
 
 func (p TextProcessor) Stop() error {
 	log.Println("TextProcessor.Stop")
 	return nil
+}
+
+func (p TextProcessor) Name() string {
+	return p.name
+}
+func (p TextProcessor) InChannel() chan DataUnit {
+	return p.inChannel
 }

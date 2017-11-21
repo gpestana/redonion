@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"github.com/gpestana/redonion/fetcher"
+	"github.com/gpestana/redonion/outputs"
 	"github.com/gpestana/redonion/processors"
 	"log"
 	"os"
@@ -23,30 +24,36 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// init pipeline
-	inputChn := make(chan string, len(ulist))
-	textChn := make(chan string, len(ulist))
-	text2Chn := make(chan string, len(ulist))
-	chs := []chan string{inputChn, textChn, text2Chn}
+	text1Chn := make(chan processor.DataUnit, len(ulist))
+	text2Chn := make(chan processor.DataUnit, len(ulist))
+	chs := []chan processor.DataUnit{text1Chn, text2Chn}
+
+	outputChn := make(chan processor.DataUnit, len(ulist)*len(chs))
+	output := output.NewStdout(outputChn, len(ulist))
 
 	processors := []processor.Processor{
-		processor.NewTextProcessor(inputChn, textChn, len(ulist)),
-		processor.NewTextProcessor(textChn, text2Chn, len(ulist)),
+		processor.NewTextProcessor(text1Chn, outputChn, len(ulist)),
+		processor.NewTextProcessor(text2Chn, outputChn, len(ulist)),
 	}
 
-	fetcher, err := fetcher.New(ulist, proxy, timeout, inputChn)
+	fetcher, err := fetcher.New(ulist, proxy, timeout, processors)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// start pipeline
 	fetcher.Start()
+
+	// start processors
 	for _, p := range processors {
 		p.Process()
 	}
 
-	// cleanup
-	closeChannels(chs)
+	// run output
+	for i := 0; i < len(ulist); i++ {
+		output.Now()
+	}
+
+	closeChannels(chs, outputChn)
 }
 
 func parseUrls(urlsIn *string, list *string) ([]string, error) {
@@ -78,8 +85,9 @@ func parseListURL(p string) ([]string, error) {
 	return urls, s.Err()
 }
 
-func closeChannels(chs []chan string) {
+func closeChannels(chs []chan processor.DataUnit, outputCh chan processor.DataUnit) {
 	for _, ch := range chs {
 		close(ch)
 	}
+	close(outputCh)
 }
