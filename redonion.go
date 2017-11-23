@@ -50,8 +50,15 @@ func main() {
 
 	// run output
 	for i := 0; i < len(ulist); i++ {
-		output.Now()
+		output.Run()
 	}
+
+	jres, err := output.Result()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	os.Stdout.Write(jres)
 
 	closeChannels(chs, outputChn)
 }

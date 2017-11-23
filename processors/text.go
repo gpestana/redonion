@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"github.com/google/uuid"
 	"log"
 )
 
@@ -12,8 +13,13 @@ type TextProcessor struct {
 }
 
 func NewTextProcessor(in chan DataUnit, out chan DataUnit, len int) TextProcessor {
+	uuid, err := uuid.NewUUID()
+	if err != nil {
+		log.Fatal(err)
+	}
+	name := "text" + uuid.String()
 	return TextProcessor{
-		name:        "text",
+		name:        name,
 		inChannel:   in,
 		outChannel:  out,
 		inputLenght: len,

@@ -1,25 +1,45 @@
 package output
 
 import (
+	"encoding/json"
 	"github.com/gpestana/redonion/processors"
-	"log"
 )
 
 type Stdout struct {
 	inChannel    chan processor.DataUnit
 	outputLength int
+	Results      []StdoutResult
+}
+
+type StdoutResult struct {
+	Url           string
+	ProcessorName string
+	Output        string
 }
 
 func NewStdout(chn chan processor.DataUnit, len int) Stdout {
 	return Stdout{
 		inChannel:    chn,
 		outputLength: len,
+		Results:      []StdoutResult{},
 	}
 }
 
-func (o Stdout) Now() {
+func (o *Stdout) Run() {
 	for i := 0; i < o.outputLength; i++ {
 		du := <-o.inChannel
-		log.Println(len(du.Output))
+		pr := *du.Processor
+
+		r := StdoutResult{
+			Url:           du.Url,
+			ProcessorName: pr.Name(),
+			Output:        du.Output,
+		}
+		o.Results = append(o.Results, r)
 	}
+}
+
+func (o Stdout) Result() ([]byte, error) {
+	json, err := json.Marshal(o.Results)
+	return json, err
 }

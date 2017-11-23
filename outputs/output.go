@@ -1,5 +1,5 @@
 package output
 
 type Output interface {
-	Now()
+	Run()
 }

@@ -36,7 +36,7 @@ func (f *Fetcher) Start() {
 			r, _ := f.request(u)
 			// fan-out result from fetcher to all registerd processors
 			for _, p := range f.processors {
-				du := processor.DataUnit{&p, r}
+				du := processor.DataUnit{&p, u, r}
 				p.InChannel() <- du
 			}
 		}(u)
