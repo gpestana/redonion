@@ -1,2 +1,5 @@
-onionscandb
 Makefile
+output.json
+.DS_Store
+*.swp
+
