@@ -14,7 +14,8 @@ type Stdout struct {
 type StdoutResult struct {
 	Url           string
 	ProcessorName string
-	Output        string
+	Output        []byte
+	OutputString  string
 }
 
 func NewStdout(chn chan processor.DataUnit, len int) Stdout {
@@ -34,6 +35,7 @@ func (o *Stdout) Run() {
 			Url:           du.Url,
 			ProcessorName: pr.Name(),
 			Output:        du.Output,
+			OutputString:  string(du.Output),
 		}
 		o.Results = append(o.Results, r)
 	}

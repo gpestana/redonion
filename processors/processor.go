@@ -10,5 +10,5 @@ type Processor interface {
 type DataUnit struct {
 	Processor *Processor
 	Url       string
-	Output    string
+	Output    []byte
 }

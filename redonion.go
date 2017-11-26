@@ -57,7 +57,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	os.Stdout.Write(jres)
 
 	closeChannels(chs, outputChn)

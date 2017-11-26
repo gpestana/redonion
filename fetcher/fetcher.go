@@ -43,17 +43,17 @@ func (f *Fetcher) Start() {
 	}
 }
 
-func (f *Fetcher) request(u string) (string, error) {
+func (f *Fetcher) request(u string) ([]byte, error) {
 	proxyURL, err := url.Parse("socks5://" + f.proxy)
 	if err != nil {
 		fmt.Println("Failed to parse proxy URL: " + u)
-		return "", err
+		return []byte{}, err
 	}
 
 	dialer, err := proxy.FromURL(proxyURL, proxy.Direct)
 	if err != nil {
 		fmt.Println("Failed to obtain proxy dialer ", err)
-		return "", err
+		return []byte{}, err
 	}
 
 	t := &http.Transport{Dial: dialer.Dial}
@@ -64,7 +64,7 @@ func (f *Fetcher) request(u string) (string, error) {
 	r, err := c.Get(u)
 	if err != nil {
 		fmt.Println("Failed to issue GET request: ", err)
-		return err.Error(), nil
+		return []byte(err.Error()), nil
 	}
 	defer r.Body.Close()
 
@@ -72,5 +72,5 @@ func (f *Fetcher) request(u string) (string, error) {
 	if err != nil {
 		fmt.Println("Failed to read the body ", err)
 	}
-	return string(b[:]), nil
+	return b, nil
 }
