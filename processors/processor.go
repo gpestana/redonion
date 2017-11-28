@@ -1,5 +1,9 @@
 package processor
 
+import (
+	"io"
+)
+
 type Processor interface {
 	InChannel() chan DataUnit
 	Name() string
@@ -11,4 +15,5 @@ type DataUnit struct {
 	Processor *Processor
 	Url       string
 	Output    []byte
+	Reader    io.Reader
 }
