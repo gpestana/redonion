@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gpestana/redonion/processors"
 	"golang.org/x/net/proxy"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -33,27 +34,27 @@ func (f *Fetcher) Start() {
 	for _, u := range f.urls {
 		log.Println("Fetcher.Start: spinning new goroutine " + u)
 		go func(u string) {
-			r, _ := f.request(u)
+			b, r, _ := f.request(u)
 			// fan-out result from fetcher to all registerd processors
 			for _, p := range f.processors {
-				du := processor.DataUnit{&p, u, r}
+				du := processor.DataUnit{&p, u, b, r}
 				p.InChannel() <- du
 			}
 		}(u)
 	}
 }
 
-func (f *Fetcher) request(u string) ([]byte, error) {
+func (f *Fetcher) request(u string) ([]byte, io.Reader, error) {
 	proxyURL, err := url.Parse("socks5://" + f.proxy)
 	if err != nil {
 		fmt.Println("Failed to parse proxy URL: " + u)
-		return []byte{}, err
+		return []byte{}, nil, err
 	}
 
 	dialer, err := proxy.FromURL(proxyURL, proxy.Direct)
 	if err != nil {
 		fmt.Println("Failed to obtain proxy dialer ", err)
-		return []byte{}, err
+		return []byte{}, nil, err
 	}
 
 	t := &http.Transport{Dial: dialer.Dial}
@@ -64,7 +65,7 @@ func (f *Fetcher) request(u string) ([]byte, error) {
 	r, err := c.Get(u)
 	if err != nil {
 		fmt.Println("Failed to issue GET request: ", err)
-		return []byte(err.Error()), nil
+		return []byte(err.Error()), nil, nil
 	}
 	defer r.Body.Close()
 
@@ -72,5 +73,5 @@ func (f *Fetcher) request(u string) ([]byte, error) {
 	if err != nil {
 		fmt.Println("Failed to read the body ", err)
 	}
-	return b, nil
+	return b, r.Body, nil
 }
