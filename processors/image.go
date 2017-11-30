@@ -1,6 +1,9 @@
 package processor
 
 import (
+	"golang.org/x/net/html"
+	//"html"
+	"io"
 	"log"
 )
 
@@ -34,7 +37,7 @@ func (p *ImageProcessor) Process() {
 		du := DataUnit{}
 		du = <-p.inChannel
 
-		imgs := images(du.Url)
+		imgs := images(du.Reader)
 		for _, url := range imgs {
 			i := Image{
 				url:      url,
@@ -58,16 +61,40 @@ func (p *ImageProcessor) InChannel() chan DataUnit {
 	return p.inChannel
 }
 
-func images(url string) []string {
+//gets all image urls from HTML
+func images(r io.Reader) []string {
 	urls := []string{}
-	log.Println("Image.images")
-	return urls
+
+	tz := html.NewTokenizer(r)
+	for {
+		tok := tz.Next()
+		switch {
+		case tok == html.ErrorToken:
+			return urls
+		case tok == html.StartTagToken:
+			t := tz.Token()
+			if t.Data == "img" {
+				urls = append(urls, "img")
+			}
+		case tok == html.SelfClosingTagToken:
+			t := tz.Token()
+			if t.Data == "img" {
+				for _, a := range t.Attr {
+					if a.Key == "src" {
+						urls = append(urls, a.Val)
+					}
+				}
+			}
+		}
+	}
 }
 
+//gets image metadata if possible
 func (img *Image) Metadata() {
 	log.Println("Image.Metadata")
 }
 
+//gets recognition info about image
 func (img *Image) Recon() {
 	log.Println("Image.Recon")
 }
