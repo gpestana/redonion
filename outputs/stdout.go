@@ -30,7 +30,6 @@ func (o *Stdout) Run() {
 	for i := 0; i < o.outputLength; i++ {
 		du := <-o.inChannel
 		pr := *du.Processor
-
 		r := StdoutResult{
 			Url:           du.Url,
 			ProcessorName: pr.Name(),
