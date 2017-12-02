@@ -2,7 +2,6 @@ package processor
 
 import (
 	"golang.org/x/net/html"
-	//"html"
 	"io"
 	"log"
 )
@@ -31,14 +30,14 @@ func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int) ImageProces
 	}
 }
 
-func (p *ImageProcessor) Process() {
+func (p ImageProcessor) Process() {
 	log.Println("ImageProcessor.Process")
 	for j := 0; j < p.inputLength; j++ {
 		du := DataUnit{}
 		du = <-p.inChannel
 
-		imgs := images(du.Reader)
-		for _, url := range imgs {
+		imgUrls := images(du.Reader)
+		for _, url := range imgUrls {
 			i := Image{
 				url:      url,
 				metadata: []string{},
@@ -48,16 +47,15 @@ func (p *ImageProcessor) Process() {
 			i.Recon()
 			p.images = append(p.images, i)
 		}
-
 		p.outChannel <- du
 	}
 }
 
-func (p *ImageProcessor) Name() string {
+func (p ImageProcessor) Name() string {
 	return p.name
 }
 
-func (p *ImageProcessor) InChannel() chan DataUnit {
+func (p ImageProcessor) InChannel() chan DataUnit {
 	return p.inChannel
 }
 

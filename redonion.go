@@ -24,16 +24,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	text1Chn := make(chan processor.DataUnit, len(ulist))
-	text2Chn := make(chan processor.DataUnit, len(ulist))
-	chs := []chan processor.DataUnit{text1Chn, text2Chn}
+	//textChn := make(chan processor.DataUnit, len(ulist))
+	imgChn := make(chan processor.DataUnit, len(ulist))
+	//chs := []chan processor.DataUnit{textChn, imgChn}
+	chs := []chan processor.DataUnit{imgChn}
 
 	outputChn := make(chan processor.DataUnit, len(ulist)*len(chs))
 	output := output.NewStdout(outputChn, len(ulist))
 
 	processors := []processor.Processor{
-		processor.NewTextProcessor(text1Chn, outputChn, len(ulist)),
-		processor.NewTextProcessor(text2Chn, outputChn, len(ulist)),
+		//processor.NewTextProcessor(textChn, outputChn, len(ulist)),
+		processor.NewImageProcessor(imgChn, outputChn, len(ulist)),
 	}
 
 	fetcher, err := fetcher.New(ulist, proxy, timeout, processors)
@@ -42,16 +43,10 @@ func main() {
 	}
 
 	fetcher.Start()
-
-	// start processors
 	for _, p := range processors {
 		p.Process()
 	}
-
-	// run output
-	for i := 0; i < len(ulist); i++ {
-		output.Run()
-	}
+	output.Run()
 
 	jres, err := output.Result()
 	if err != nil {
