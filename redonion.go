@@ -2,14 +2,20 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"github.com/gpestana/redonion/fetcher"
-	"github.com/gpestana/redonion/outputs"
 	"github.com/gpestana/redonion/processors"
 	"log"
 	"os"
 	"strings"
 )
+
+type Output struct {
+	Url           string
+	ProcessorName string
+	Outputs       []processor.Output
+}
 
 func main() {
 
@@ -24,16 +30,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//textChn := make(chan processor.DataUnit, len(ulist))
+	textChn := make(chan processor.DataUnit, len(ulist))
 	imgChn := make(chan processor.DataUnit, len(ulist))
-	//chs := []chan processor.DataUnit{textChn, imgChn}
-	chs := []chan processor.DataUnit{imgChn}
+	chs := []chan processor.DataUnit{textChn, imgChn}
 
 	outputChn := make(chan processor.DataUnit, len(ulist)*len(chs))
-	output := output.NewStdout(outputChn, len(ulist))
 
 	processors := []processor.Processor{
-		//processor.NewTextProcessor(textChn, outputChn, len(ulist)),
+		processor.NewTextProcessor(textChn, outputChn, len(ulist)),
 		processor.NewImageProcessor(imgChn, outputChn, len(ulist)),
 	}
 
@@ -42,13 +46,29 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// start fetcher
 	fetcher.Start()
+
+	// spin up all processors
 	for _, p := range processors {
 		p.Process()
 	}
-	output.Run()
 
-	jres, err := output.Result()
+	// get all results from output channel
+	results := []Output{}
+	sizeRes := len(ulist) * len(chs)
+	for i := 0; i < sizeRes; i++ {
+		du := <-outputChn
+		pr := *du.Processor
+		r := Output{
+			Url:           du.Url,
+			ProcessorName: pr.Name(),
+			Outputs:       du.Outputs,
+		}
+		results = append(results, r)
+	}
+
+	jres, err := json.Marshal(results)
 	if err != nil {
 		log.Fatal(err)
 	}

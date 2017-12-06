@@ -12,17 +12,21 @@ type Processor interface {
 	Process()
 }
 
-type DataUnit struct {
-	Processor *Processor
-	Url       string
-	Output    []byte
-	Reader    io.Reader
-}
-
 func Name(n string) string {
 	uuid, err := uuid.NewUUID()
 	if err != nil {
 		log.Fatal(err)
 	}
 	return n + "_" + uuid.String()
+}
+
+type DataUnit struct {
+	Processor *Processor
+	Url       string
+	Reader    io.Reader
+	Outputs   []Output
+}
+
+type Output interface {
+	Json() ([]byte, error)
 }

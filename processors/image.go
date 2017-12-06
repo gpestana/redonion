@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"encoding/json"
 	"golang.org/x/net/html"
 	"io"
 	"log"
@@ -15,9 +16,9 @@ type ImageProcessor struct {
 }
 
 type Image struct {
-	url      string
-	metadata []string
-	recon    []string
+	Url      string
+	Metadata []string
+	Recon    []string
 }
 
 func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int) ImageProcessor {
@@ -26,8 +27,12 @@ func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int) ImageProces
 		inChannel:   in,
 		outChannel:  out,
 		inputLength: len,
-		images:      []Image{},
 	}
+}
+
+func (img Image) Json() ([]byte, error) {
+	json, err := json.Marshal(img)
+	return json, err
 }
 
 func (p ImageProcessor) Process() {
@@ -39,13 +44,13 @@ func (p ImageProcessor) Process() {
 		imgUrls := images(du.Reader)
 		for _, url := range imgUrls {
 			i := Image{
-				url:      url,
-				metadata: []string{},
-				recon:    []string{},
+				Url:      url,
+				Metadata: []string{},
+				Recon:    []string{},
 			}
-			i.Metadata()
-			i.Recon()
-			p.images = append(p.images, i)
+			i.metadata()
+			i.recon()
+			du.Outputs = append(du.Outputs, i)
 		}
 		p.outChannel <- du
 	}
@@ -88,11 +93,11 @@ func images(r io.Reader) []string {
 }
 
 //gets image metadata if possible
-func (img *Image) Metadata() {
+func (img *Image) metadata() {
 	log.Println("Image.Metadata")
 }
 
 //gets recognition info about image
-func (img *Image) Recon() {
+func (img *Image) recon() {
 	log.Println("Image.Recon")
 }

@@ -34,10 +34,11 @@ func (f *Fetcher) Start() {
 	for _, u := range f.urls {
 		log.Println("Fetcher.Start: spinning new goroutine " + u)
 		go func(u string) {
-			b, r, _ := f.request(u)
+			out := []processor.Output{}
+			_, r, _ := f.request(u)
 			// fan-out result from fetcher to all registerd processors
 			for _, p := range f.processors {
-				du := processor.DataUnit{&p, u, b, r}
+				du := processor.DataUnit{&p, u, r, out}
 				p.InChannel() <- du
 			}
 		}(u)
