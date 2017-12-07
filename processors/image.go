@@ -1,9 +1,9 @@
 package processor
 
 import (
+	"bytes"
 	"encoding/json"
 	"golang.org/x/net/html"
-	"io"
 	"log"
 )
 
@@ -16,9 +16,11 @@ type ImageProcessor struct {
 }
 
 type Image struct {
-	Url      string
-	Metadata []string
-	Recon    []string
+	Url           string
+	ProcessorName string
+	Metadata      []string
+	Recon         []string
+	Error         error
 }
 
 func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int) ImageProcessor {
@@ -41,12 +43,13 @@ func (p ImageProcessor) Process() {
 		du := DataUnit{}
 		du = <-p.inChannel
 
-		imgUrls := images(du.Reader)
+		imgUrls := images(du.Html)
 		for _, url := range imgUrls {
 			i := Image{
-				Url:      url,
-				Metadata: []string{},
-				Recon:    []string{},
+				Url:           url,
+				ProcessorName: p.name,
+				Metadata:      []string{},
+				Recon:         []string{},
 			}
 			i.metadata()
 			i.recon()
@@ -65,9 +68,9 @@ func (p ImageProcessor) InChannel() chan DataUnit {
 }
 
 //gets all image urls from HTML
-func images(r io.Reader) []string {
+func images(b []byte) []string {
 	urls := []string{}
-
+	r := bytes.NewReader(b)
 	tz := html.NewTokenizer(r)
 	for {
 		tok := tz.Next()
@@ -77,7 +80,11 @@ func images(r io.Reader) []string {
 		case tok == html.StartTagToken:
 			t := tz.Token()
 			if t.Data == "img" {
-				urls = append(urls, "img")
+				for _, a := range t.Attr {
+					if a.Key == "src" {
+						urls = append(urls, a.Val)
+					}
+				}
 			}
 		case tok == html.SelfClosingTagToken:
 			t := tz.Token()

@@ -11,10 +11,10 @@ import (
 	"strings"
 )
 
+// data structure in which outputs will be rendered
 type Output struct {
-	Url           string
-	ProcessorName string
-	Outputs       []processor.Output
+	Url     string
+	Outputs []interface{}
 }
 
 func main() {
@@ -59,11 +59,9 @@ func main() {
 	sizeRes := len(ulist) * len(chs)
 	for i := 0; i < sizeRes; i++ {
 		du := <-outputChn
-		pr := *du.Processor
 		r := Output{
-			Url:           du.Url,
-			ProcessorName: pr.Name(),
-			Outputs:       du.Outputs,
+			Url:     du.Url,
+			Outputs: du.Outputs,
 		}
 		results = append(results, r)
 	}

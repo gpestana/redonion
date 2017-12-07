@@ -2,7 +2,6 @@ package processor
 
 import (
 	"github.com/google/uuid"
-	"io"
 	"log"
 )
 
@@ -23,8 +22,8 @@ func Name(n string) string {
 type DataUnit struct {
 	Processor *Processor
 	Url       string
-	Reader    io.Reader
-	Outputs   []Output
+	Html      []byte
+	Outputs   []interface{}
 }
 
 type Output interface {
