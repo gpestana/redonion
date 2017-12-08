@@ -1,15 +1,10 @@
 # Redonion
 
+[![Build Status](https://travis-ci.org/gpestana/redonion.svg?branch=master)](https://travis-ci.org/gpestana/redonion)
+
 Deep web scanning done right
 
 ![redonion logo](https://raw.githubusercontent.com/gpestana/redonion/master/redonion.png)
-
-
-Redonion is a plugable scanner for the tor network. You can write your own data i
-fetchers (`/fetchers`), processors (`/processors`) and poutput components 
-(`/outputs`) or use the pre built components. All components run on goroutines
-and results of each components are piped using go channels. This architecture
-allows for fast scanning and easy development of new features.
 
 ### How to use
 
@@ -33,14 +28,11 @@ fetchers or from other processors.
 - **text**: (`/processors/text.go`) pass-through processor which will pass the
 output content from input channel to output channel.
 
-#### Outputs 
-
-- **stdout**: (`/outputs/stdout.go`) writes result of the pipeline to standart 
-output
-
+- **image**: (`/processors/image.go`) fetches all website images and inspects
+various types of metadata
 
 ### Contribute
 
 Contributions for new fetchers, processors and outputs welcome.
 
-gpestana © MIT or whatever
+gpestana © MIT
