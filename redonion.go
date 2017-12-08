@@ -21,8 +21,6 @@ func main() {
 
 	urls := flag.String("urls", "http://127.0.0.1", "list of addresses to scan (separated by comma)")
 	list := flag.String("list", "", "path for list of addresses to scan")
-	timeout := flag.Int("timeout", 15, "requests timeout (seconds)")
-	proxy := flag.String("proxy", "127.0.0.1:9150", "url of tor proxy")
 	flag.Parse()
 
 	ulist, err := parseUrls(urls, list)
@@ -41,7 +39,7 @@ func main() {
 		processor.NewImageProcessor(imgChn, outputChn, len(ulist)),
 	}
 
-	fetcher, err := fetcher.New(ulist, proxy, timeout, processors)
+	fetcher, err := fetcher.New(ulist, processors)
 	if err != nil {
 		log.Fatal(err)
 	}

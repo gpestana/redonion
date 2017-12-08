@@ -1,9 +1,5 @@
 package processor
 
-import (
-	"log"
-)
-
 type TextProcessor struct {
 	name        string
 	inChannel   chan DataUnit
@@ -28,7 +24,6 @@ func NewTextProcessor(in chan DataUnit, out chan DataUnit, len int) TextProcesso
 }
 
 func (p TextProcessor) Process() {
-	log.Println("TextProcessor.Process")
 	for i := 0; i < p.inputLenght; i++ {
 		du := DataUnit{}
 		du = <-p.inChannel
