@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"golang.org/x/net/html"
 	"log"
+	"strings"
 )
 
 type ImageProcessor struct {
@@ -45,8 +46,9 @@ func (p ImageProcessor) Process() {
 
 		imgUrls := images(du.Html)
 		for _, url := range imgUrls {
+			curl := canonicalUrl(du.Url, url)
 			i := Image{
-				Url:           url,
+				Url:           curl,
 				ProcessorName: p.name,
 				Metadata:      []string{},
 				Recon:         []string{},
@@ -107,4 +109,14 @@ func (img *Image) metadata() {
 //gets recognition info about image
 func (img *Image) recon() {
 	log.Println("Image.Recon")
+}
+
+func canonicalUrl(b string, u string) string {
+	if strings.HasPrefix(u, "http") || strings.HasPrefix(u, "www") {
+		return u
+	}
+	b = strings.TrimSuffix(b, "/")
+	u = strings.TrimPrefix(u, ".")
+	u = strings.TrimPrefix(u, "/")
+	return b + "/" + u
 }
