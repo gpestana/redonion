@@ -10,7 +10,7 @@ func TestImageParser_simple(t *testing.T) {
 
 	imgs := images(b)
 	if len(imgs) != 2 {
-		t.Fatalf("Got wrong number of parsed image URL")
+		t.Fatal("Got wrong number of parsed image URL")
 	}
 	if imgs[0] != "foo.jpeg" {
 		t.Error("foo.jpeg not parsed correctly")

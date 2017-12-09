@@ -20,6 +20,7 @@ type ImageProcessor struct {
 }
 
 type Image struct {
+	RootUrl       string
 	Url           string
 	ProcessorName string
 	Exif          map[string]string
@@ -60,6 +61,7 @@ func (p ImageProcessor) Process() {
 			}
 
 			i := Image{
+				RootUrl:       du.Url,
 				Url:           curl,
 				ProcessorName: p.name,
 				Exif:          meta,

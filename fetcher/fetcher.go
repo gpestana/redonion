@@ -23,7 +23,6 @@ func (f *Fetcher) Start() {
 	for _, u := range f.urls {
 		log.Println("Fetcher: spinning goroutine " + u)
 		go func(u string) {
-			//out := []processor.Output{}
 			var out []interface{}
 			b, _ := tor.Get(u)
 			// fan-out result from fetcher to all registerd processors

@@ -28,14 +28,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	textChn := make(chan processor.DataUnit, len(ulist))
 	imgChn := make(chan processor.DataUnit, len(ulist))
-	chs := []chan processor.DataUnit{textChn, imgChn}
+	hiddenChn := make(chan processor.DataUnit, len(ulist))
+	chs := []chan processor.DataUnit{hiddenChn, imgChn}
 
 	outputChn := make(chan processor.DataUnit, len(ulist)*len(chs))
 
 	processors := []processor.Processor{
-		processor.NewTextProcessor(textChn, outputChn, len(ulist)),
+		processor.NewHiddenProcessor(hiddenChn, outputChn, len(ulist)),
 		processor.NewImageProcessor(imgChn, outputChn, len(ulist)),
 	}
 
@@ -98,6 +98,7 @@ func parseListURL(p string) ([]string, error) {
 	s := bufio.NewScanner(f)
 	for s.Scan() {
 		urls = append(urls, s.Text())
+
 	}
 	return urls, s.Err()
 }

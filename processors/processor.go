@@ -7,7 +7,6 @@ import (
 
 type Processor interface {
 	InChannel() chan DataUnit
-	Name() string
 	Process()
 }
 
