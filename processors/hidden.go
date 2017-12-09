@@ -42,8 +42,14 @@ func (p HiddenProcessor) Process() {
 		hs := hiddenUrls(du.Html)
 
 		for _, u := range hs {
-			log.Println(u)
+			h := HiddenService{
+				RootUrl:       du.Url,
+				ProcessorName: p.name,
+				Url:           u,
+			}
+			du.Outputs = append(du.Outputs, h)
 		}
+		p.outChannel <- du
 	}
 }
 
