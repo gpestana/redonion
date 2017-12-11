@@ -6,12 +6,13 @@ import (
 	"flag"
 	"github.com/gpestana/redonion/fetcher"
 	"github.com/gpestana/redonion/processors"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 )
 
-// data structure in which outputs will be rendered
+// data structure in which outputs will be parsed to
 type Output struct {
 	Url     string
 	Outputs []interface{}
@@ -21,7 +22,15 @@ func main() {
 
 	urls := flag.String("urls", "http://127.0.0.1", "list of addresses to scan (separated by comma)")
 	list := flag.String("list", "", "path for list of addresses to scan")
+	c := flag.String("config", "", "path for configuration file")
 	flag.Parse()
+
+	cnf, err := config(c)
+	if err != nil {
+		log.Fatal("Could not parse configuration file " + err.Error())
+	}
+
+	log.Println(cnf)
 
 	ulist, err := parseUrls(urls, list)
 	if err != nil {
@@ -71,6 +80,31 @@ func main() {
 	os.Stdout.Write(jres)
 
 	closeChannels(chs, outputChn)
+}
+
+type outputConf struct {
+	Type     string `json:"type"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Host     string `json:"host"`
+}
+
+type Config struct {
+	Outputs []outputConf `json:"outputs"`
+}
+
+func config(p *string) (Config, error) {
+	cf, err := ioutil.ReadFile(*p)
+	log.Println(string(cf))
+	if err != nil {
+		return Config{}, err
+	}
+	config := Config{}
+	err = json.Unmarshal([]byte(cf), &config)
+	if err != nil {
+		return Config{}, nil
+	}
+	return config, nil
 }
 
 func parseUrls(urlsIn *string, list *string) ([]string, error) {

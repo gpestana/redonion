@@ -1,0 +1,9 @@
+{
+	"outputs": [{
+			"type": "elasticsearch",
+			"user": "user",
+			"password": "pass",
+			"host": "localhost:9200"
+		}
+	]
+}

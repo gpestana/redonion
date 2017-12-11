@@ -4,7 +4,6 @@ package processor
 import (
 	"bytes"
 	"golang.org/x/net/html"
-	"log"
 	"strings"
 )
 

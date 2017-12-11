@@ -2,9 +2,9 @@ language: go
 go:
   - master
 
-before_install:
-  - sudo apt-get -qq update
-  - apt-get install -y libexif-dev
+#before_install:
+#  - sudo apt-get -qq update
+#  - apt-get install -y libexif-dev
 
 install:
   - go get -u github.com/xor-gate/goexif2/cmd/goexif2
