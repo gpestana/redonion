@@ -3,7 +3,8 @@
 			"type": "elasticsearch",
 			"user": "user",
 			"password": "pass",
-			"host": "localhost:9200"
+			"host": "http://localhost:9200",
+			"index": "crawl-01"
 		}
 	]
 }

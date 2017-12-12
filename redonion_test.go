@@ -13,7 +13,8 @@ func TestConfigOutputES(t *testing.T) {
       "type": "elasticsearch",
       "user": "user",
       "password": "pass",
-      "host": "localhost:9200"
+      "host": "localhost:9200",
+      "index": "index-01"
     }
   ]
 }	
@@ -39,6 +40,10 @@ func TestConfigOutputES(t *testing.T) {
 
 	if conf.Outputs[0].Host != "localhost:9200" {
 		t.Error("elasticsearch type host not parsed correctly")
+	}
+
+	if conf.Outputs[0].Index != "index-01" {
+		t.Error("elasticsearch type index not parsed correctly")
 	}
 
 }

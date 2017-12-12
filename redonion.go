@@ -5,18 +5,13 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/gpestana/redonion/fetcher"
+	"github.com/gpestana/redonion/outputs"
 	"github.com/gpestana/redonion/processors"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 )
-
-// data structure in which outputs will be parsed to
-type Output struct {
-	Url     string
-	Outputs []interface{}
-}
 
 func main() {
 
@@ -29,8 +24,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Could not parse configuration file " + err.Error())
 	}
-
-	log.Println(cnf)
 
 	ulist, err := parseUrls(urls, list)
 	if err != nil {
@@ -61,14 +54,26 @@ func main() {
 		p.Process()
 	}
 
-	// get all results from output channel
-	results := []Output{}
+	// elasticsearch output
+	es := outputs.EsOutput{}
+	for _, c := range cnf.Outputs {
+		if c.Type == "elasticsearch" {
+			es, _ = outputs.NewEs(c.User, c.Password, c.Host, c.Index)
+			break
+		}
+	}
+
+	results := []outputs.Unit{}
 	sizeRes := len(ulist) * len(chs)
 	for i := 0; i < sizeRes; i++ {
 		du := <-outputChn
-		r := Output{
+		r := outputs.Unit{
 			Url:     du.Url,
 			Outputs: du.Outputs,
+		}
+		err := es.Handle(r)
+		if err != nil {
+			log.Println(err)
 		}
 		results = append(results, r)
 	}
@@ -87,6 +92,7 @@ type outputConf struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
 	Host     string `json:"host"`
+	Index    string `json:"index"`
 }
 
 type Config struct {
@@ -95,7 +101,6 @@ type Config struct {
 
 func config(p *string) (Config, error) {
 	cf, err := ioutil.ReadFile(*p)
-	log.Println(string(cf))
 	if err != nil {
 		return Config{}, err
 	}
