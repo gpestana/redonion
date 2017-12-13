@@ -8,3 +8,7 @@ go:
 
 install:
   - go get -u github.com/xor-gate/goexif2/cmd/goexif2
+  - go get -u github.com/google/uuid
+  - go get -u github.com/xiam/exif
+  - go get -u golang.org/x/net/html
+  - go get -u golang.org/x/net/proxy
