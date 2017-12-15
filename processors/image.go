@@ -17,6 +17,7 @@ type ImageProcessor struct {
 	outChannel  chan DataUnit
 	inputLength int
 	images      []Image
+	tfUrl       string
 }
 
 type Image struct {
@@ -24,16 +25,25 @@ type Image struct {
 	Url           string
 	ProcessorName string
 	Exif          map[string]string
-	Recon         []string
+	Recon         map[string]string
 	Errors        []string
 }
 
-func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int) ImageProcessor {
+func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int, cnf Config) ImageProcessor {
+	var tfUrl string
+	for _, c := range cnf.Processors {
+		if c.Type == "image" {
+			tfUrl = c.TFUrl
+			break
+		}
+	}
+
 	return ImageProcessor{
 		name:        Name("image"),
 		inChannel:   in,
 		outChannel:  out,
 		inputLength: len,
+		tfUrl:       tfUrl,
 	}
 }
 
@@ -55,7 +65,14 @@ func (p ImageProcessor) Process() {
 			if err != nil {
 				errs = append(errs, err.Error())
 			}
+
+			// TODO: refactor to struct method?
 			meta, err := metadata(imgData)
+			if err != nil {
+				errs = append(errs, err.Error())
+			}
+
+			recon, err := recognition(imgData)
 			if err != nil {
 				errs = append(errs, err.Error())
 			}
@@ -65,9 +82,10 @@ func (p ImageProcessor) Process() {
 				Url:           curl,
 				ProcessorName: p.name,
 				Exif:          meta,
-				Recon:         []string{},
+				Recon:         recon,
 				Errors:        errs,
 			}
+
 			du.Outputs = append(du.Outputs, i)
 		}
 		p.outChannel <- du
@@ -114,7 +132,6 @@ func images(b []byte) []string {
 	}
 }
 
-//gets image metadata if possible
 func metadata(data []byte) (map[string]string, error) {
 	r := exif.New()
 	buf := bytes.NewBuffer(data)
@@ -129,9 +146,9 @@ func metadata(data []byte) (map[string]string, error) {
 	return r.Tags, nil
 }
 
-//gets recognition info about image
-func (img *Image) recon() {
+func recognition(data []byte) (map[string]string, error) {
 	log.Println("Image.Recon")
+	return nil, nil
 }
 
 func canonicalUrl(b string, u string) string {

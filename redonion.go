@@ -21,6 +21,7 @@ func main() {
 	flag.Parse()
 
 	cnf, err := config(c)
+	procCnf, err := processor.ParseConfig(c)
 	if err != nil {
 		log.Fatal("Could not parse configuration file " + err.Error())
 	}
@@ -38,7 +39,7 @@ func main() {
 
 	processors := []processor.Processor{
 		processor.NewHiddenProcessor(hiddenChn, outputChn, len(ulist)),
-		processor.NewImageProcessor(imgChn, outputChn, len(ulist)),
+		processor.NewImageProcessor(imgChn, outputChn, len(ulist), procCnf),
 	}
 
 	fetcher, err := fetcher.New(ulist, processors)
@@ -95,8 +96,14 @@ type outputConf struct {
 	Index    string `json:"index"`
 }
 
+type processorsC struct {
+	Type  string `json:"type"`
+	TFUrl string `json:"tensorflow_url"`
+}
+
 type Config struct {
-	Outputs []outputConf `json:"outputs"`
+	Outputs    []outputConf  `json:"outputs"`
+	Processors []processorsC `json:"processors"`
 }
 
 func config(p *string) (Config, error) {
