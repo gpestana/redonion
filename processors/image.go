@@ -7,7 +7,7 @@ import (
 	"github.com/xiam/exif"
 	"golang.org/x/net/html"
 	"io"
-	"log"
+	"net/http"
 	"strings"
 )
 
@@ -17,6 +17,7 @@ type ImageProcessor struct {
 	outChannel  chan DataUnit
 	inputLength int
 	images      []Image
+	tfUrl       string
 }
 
 type Image struct {
@@ -24,16 +25,25 @@ type Image struct {
 	Url           string
 	ProcessorName string
 	Exif          map[string]string
-	Recon         []string
+	Recon         []Recon
 	Errors        []string
 }
 
-func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int) ImageProcessor {
+func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int, cnf Config) ImageProcessor {
+	var tfUrl string
+	for _, c := range cnf.Processors {
+		if c.Type == "image" {
+			tfUrl = c.TFUrl
+			break
+		}
+	}
+
 	return ImageProcessor{
 		name:        Name("image"),
 		inChannel:   in,
 		outChannel:  out,
 		inputLength: len,
+		tfUrl:       tfUrl,
 	}
 }
 
@@ -55,7 +65,14 @@ func (p ImageProcessor) Process() {
 			if err != nil {
 				errs = append(errs, err.Error())
 			}
+
+			// TODO: refactor to struct method?
 			meta, err := metadata(imgData)
+			if err != nil {
+				errs = append(errs, err.Error())
+			}
+
+			recon, err := recognition(imgData)
 			if err != nil {
 				errs = append(errs, err.Error())
 			}
@@ -65,7 +82,7 @@ func (p ImageProcessor) Process() {
 				Url:           curl,
 				ProcessorName: p.name,
 				Exif:          meta,
-				Recon:         []string{},
+				Recon:         recon,
 				Errors:        errs,
 			}
 			du.Outputs = append(du.Outputs, i)
@@ -114,7 +131,6 @@ func images(b []byte) []string {
 	}
 }
 
-//gets image metadata if possible
 func metadata(data []byte) (map[string]string, error) {
 	r := exif.New()
 	buf := bytes.NewBuffer(data)
@@ -129,9 +145,30 @@ func metadata(data []byte) (map[string]string, error) {
 	return r.Tags, nil
 }
 
-//gets recognition info about image
-func (img *Image) recon() {
-	log.Println("Image.Recon")
+type Recon struct {
+	Label string `json:"label"`
+	Prob  uint   `json:"probability"`
+}
+
+func recognition(data []byte) ([]Recon, error) {
+	res := []Recon{}
+
+	// get from config
+	url := "http://localhost:8080/recognize"
+
+	// get image binary
+	// make PostFrom image=<binary>
+	// post form body is of type bytes.Buffer
+	b := bytes.Buffer{}
+	req, err := http.NewRequest("POST", url, &b)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "multipart/form-data")
+	cli := &http.Client{}
+	cli.Do(req)
+	// parse into []Recon
+	return res, nil
 }
 
 func canonicalUrl(b string, u string) string {

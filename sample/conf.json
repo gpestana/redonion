@@ -1,4 +1,8 @@
 {
+	"processors": [{
+		"type": "image",
+		"tensorflow_url": "localhost:8080"
+	}],
 	"outputs": [{
 			"type": "elasticsearch",
 			"user": "user",

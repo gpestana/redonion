@@ -54,6 +54,7 @@ func (out *EsOutput) Handle(un Unit) error {
 		if err != nil {
 			return err
 		}
+		defer r.Body.Close()
 		rb, _ := ioutil.ReadAll(r.Body)
 		resp := PostResponse{}
 		_ = json.Unmarshal(rb, &resp)
