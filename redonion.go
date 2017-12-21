@@ -55,7 +55,7 @@ func main() {
 		p.Process()
 	}
 
-	// elasticsearch output
+	// elasticsearch output config
 	es := outputs.EsOutput{}
 	for _, c := range cnf.Outputs {
 		if c.Type == "elasticsearch" {
@@ -72,6 +72,7 @@ func main() {
 			Url:     du.Url,
 			Outputs: du.Outputs,
 		}
+		// add to elasticsearch
 		err := es.Handle(r)
 		if err != nil {
 			log.Println(err)

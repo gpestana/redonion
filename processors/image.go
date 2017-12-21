@@ -7,7 +7,7 @@ import (
 	"github.com/xiam/exif"
 	"golang.org/x/net/html"
 	"io"
-	"log"
+	"net/http"
 	"strings"
 )
 
@@ -25,7 +25,7 @@ type Image struct {
 	Url           string
 	ProcessorName string
 	Exif          map[string]string
-	Recon         map[string]string
+	Recon         []Recon
 	Errors        []string
 }
 
@@ -85,7 +85,6 @@ func (p ImageProcessor) Process() {
 				Recon:         recon,
 				Errors:        errs,
 			}
-
 			du.Outputs = append(du.Outputs, i)
 		}
 		p.outChannel <- du
@@ -146,9 +145,30 @@ func metadata(data []byte) (map[string]string, error) {
 	return r.Tags, nil
 }
 
-func recognition(data []byte) (map[string]string, error) {
-	log.Println("Image.Recon")
-	return nil, nil
+type Recon struct {
+	Label string `json:"label"`
+	Prob  uint   `json:"probability"`
+}
+
+func recognition(data []byte) ([]Recon, error) {
+	res := []Recon{}
+
+	// get from config
+	url := "http://localhost:8080/recognize"
+
+	// get image binary
+	// make PostFrom image=<binary>
+	// post form body is of type bytes.Buffer
+	b := bytes.Buffer{}
+	req, err := http.NewRequest("POST", url, &b)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "multipart/form-data")
+	cli := &http.Client{}
+	cli.Do(req)
+	// parse into []Recon
+	return res, nil
 }
 
 func canonicalUrl(b string, u string) string {
