@@ -11,7 +11,7 @@ import (
 
 const (
 	torProxy = "127.0.0.1:9150"
-	timeout  = 15
+	timeout  = 30
 )
 
 func Get(u string) ([]byte, error) {

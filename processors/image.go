@@ -3,11 +3,16 @@ package processor
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/gpestana/redonion/tor"
 	"github.com/xiam/exif"
 	"golang.org/x/net/html"
 	"io"
+	"io/ioutil"
+	"log"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"strings"
 )
 
@@ -150,25 +155,47 @@ type Recon struct {
 	Prob  uint   `json:"probability"`
 }
 
-func recognition(data []byte) ([]Recon, error) {
-	res := []Recon{}
-
-	// get from config
-	url := "http://localhost:8080/recognize"
-
-	// get image binary
-	// make PostFrom image=<binary>
-	// post form body is of type bytes.Buffer
-	b := bytes.Buffer{}
-	req, err := http.NewRequest("POST", url, &b)
+func recognition(d []byte) ([]Recon, error) {
+	// take from configs
+	reconUrl := "http://localhost:8080/recognize"
+	b := bytes.NewBuffer(d)
+	w := multipart.NewWriter(b)
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition",
+		fmt.Sprintf(`form-data; name=image; filename="from-buffer"`))
+	fw, err := w.CreatePart(h)
 	if err != nil {
-		return nil, err
+		log.Println(err)
 	}
-	req.Header.Add("Content-Type", "multipart/form-data")
+	if _, err = io.Copy(fw, b); err != nil {
+		log.Println(err)
+	}
+	w.Close()
+	req, err := http.NewRequest("POST", reconUrl, b)
+	if err != nil {
+		log.Println(err)
+	}
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	log.Println(req)
 	cli := &http.Client{}
-	cli.Do(req)
-	// parse into []Recon
-	return res, nil
+	r, err := cli.Do(req)
+	if err != nil {
+		log.Println(err)
+	}
+
+	// error
+	if r == nil {
+		log.Println("Recon: HTTP response was nil")
+		return []Recon{}, nil
+	}
+
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	log.Println(string(body))
+
+	// parse results
+
+	return []Recon{}, nil
 }
 
 func canonicalUrl(b string, u string) string {
