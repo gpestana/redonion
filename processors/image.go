@@ -3,13 +3,13 @@ package processor
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gpestana/redonion/tor"
 	"github.com/xiam/exif"
 	"golang.org/x/net/html"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -30,7 +30,7 @@ type Image struct {
 	Url           string
 	ProcessorName string
 	Exif          map[string]string
-	Recon         []Recon
+	Recon         ReconResults
 	Errors        []string
 }
 
@@ -77,7 +77,7 @@ func (p ImageProcessor) Process() {
 				errs = append(errs, err.Error())
 			}
 
-			recon, err := recognition(imgData)
+			recons, err := recognition(imgData, p.tfUrl)
 			if err != nil {
 				errs = append(errs, err.Error())
 			}
@@ -87,7 +87,7 @@ func (p ImageProcessor) Process() {
 				Url:           curl,
 				ProcessorName: p.name,
 				Exif:          meta,
-				Recon:         recon,
+				Recon:         recons,
 				Errors:        errs,
 			}
 			du.Outputs = append(du.Outputs, i)
@@ -150,52 +150,69 @@ func metadata(data []byte) (map[string]string, error) {
 	return r.Tags, nil
 }
 
-type Recon struct {
-	Label string `json:"label"`
-	Prob  uint   `json:"probability"`
+type ReconResults struct {
+	Results []Recon
 }
 
-func recognition(d []byte) ([]Recon, error) {
-	// take from configs
-	reconUrl := "http://localhost:8080/recognize"
-	b := bytes.NewBuffer(d)
-	w := multipart.NewWriter(b)
+type Recon struct {
+	Label       string
+	Probability float32
+}
+
+func recognition(d []byte, tfUrl string) (ReconResults, error) {
+	if tfUrl == "" {
+		return ReconResults{}, errors.New("Tensorflow URL is not defined")
+	}
+	data := bytes.NewBuffer(d)
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition",
 		fmt.Sprintf(`form-data; name=image; filename="from-buffer"`))
 	fw, err := w.CreatePart(h)
 	if err != nil {
-		log.Println(err)
+		return ReconResults{}, err
 	}
-	if _, err = io.Copy(fw, b); err != nil {
-		log.Println(err)
+	if _, err = io.Copy(fw, data); err != nil {
+		return ReconResults{}, err
 	}
+
 	w.Close()
-	req, err := http.NewRequest("POST", reconUrl, b)
+	req, err := http.NewRequest("POST", tfUrl, &b)
 	if err != nil {
-		log.Println(err)
+		return ReconResults{}, err
 	}
 	req.Header.Set("Content-Type", w.FormDataContentType())
-	log.Println(req)
 	cli := &http.Client{}
 	r, err := cli.Do(req)
 	if err != nil {
-		log.Println(err)
+		return ReconResults{}, err
 	}
 
-	// error
 	if r == nil {
-		log.Println("Recon: HTTP response was nil")
-		return []Recon{}, nil
+		return ReconResults{}, errors.New("Recon: HTTP response is empty")
 	}
 
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
-	log.Println(string(body))
 
-	// parse results
+	type tfResults struct {
+		Filename string
+		Labels   []Recon
+		Err      string `json:"error"`
+	}
 
-	return []Recon{}, nil
+	res := tfResults{}
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return ReconResults{}, err
+	}
+	if recErr := res.Err; recErr != "" {
+		return ReconResults{}, errors.New("Recon: " + recErr)
+	}
+
+	recons := ReconResults{res.Labels}
+	return recons, nil
 }
 
 func canonicalUrl(b string, u string) string {
