@@ -3,11 +3,16 @@ package processor
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/gpestana/redonion/tor"
 	"github.com/xiam/exif"
 	"golang.org/x/net/html"
 	"io"
-	"log"
+	"io/ioutil"
+	"mime/multipart"
+	"net/http"
+	"net/textproto"
 	"strings"
 )
 
@@ -17,6 +22,7 @@ type ImageProcessor struct {
 	outChannel  chan DataUnit
 	inputLength int
 	images      []Image
+	tfUrl       string
 }
 
 type Image struct {
@@ -24,16 +30,25 @@ type Image struct {
 	Url           string
 	ProcessorName string
 	Exif          map[string]string
-	Recon         []string
+	Recon         ReconResults
 	Errors        []string
 }
 
-func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int) ImageProcessor {
+func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int, cnf Config) ImageProcessor {
+	var tfUrl string
+	for _, c := range cnf.Processors {
+		if c.Type == "image" {
+			tfUrl = c.TFUrl
+			break
+		}
+	}
+
 	return ImageProcessor{
 		name:        Name("image"),
 		inChannel:   in,
 		outChannel:  out,
 		inputLength: len,
+		tfUrl:       tfUrl,
 	}
 }
 
@@ -55,7 +70,14 @@ func (p ImageProcessor) Process() {
 			if err != nil {
 				errs = append(errs, err.Error())
 			}
+
+			// TODO: refactor to struct method?
 			meta, err := metadata(imgData)
+			if err != nil {
+				errs = append(errs, err.Error())
+			}
+
+			recons, err := recognition(imgData, p.tfUrl)
 			if err != nil {
 				errs = append(errs, err.Error())
 			}
@@ -65,7 +87,7 @@ func (p ImageProcessor) Process() {
 				Url:           curl,
 				ProcessorName: p.name,
 				Exif:          meta,
-				Recon:         []string{},
+				Recon:         recons,
 				Errors:        errs,
 			}
 			du.Outputs = append(du.Outputs, i)
@@ -114,7 +136,6 @@ func images(b []byte) []string {
 	}
 }
 
-//gets image metadata if possible
 func metadata(data []byte) (map[string]string, error) {
 	r := exif.New()
 	buf := bytes.NewBuffer(data)
@@ -129,9 +150,69 @@ func metadata(data []byte) (map[string]string, error) {
 	return r.Tags, nil
 }
 
-//gets recognition info about image
-func (img *Image) recon() {
-	log.Println("Image.Recon")
+type ReconResults struct {
+	Results []Recon
+}
+
+type Recon struct {
+	Label       string
+	Probability float32
+}
+
+func recognition(d []byte, tfUrl string) (ReconResults, error) {
+	if tfUrl == "" {
+		return ReconResults{}, errors.New("Tensorflow URL is not defined")
+	}
+	data := bytes.NewBuffer(d)
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Disposition",
+		fmt.Sprintf(`form-data; name=image; filename="from-buffer"`))
+	fw, err := w.CreatePart(h)
+	if err != nil {
+		return ReconResults{}, err
+	}
+	if _, err = io.Copy(fw, data); err != nil {
+		return ReconResults{}, err
+	}
+
+	w.Close()
+	req, err := http.NewRequest("POST", tfUrl, &b)
+	if err != nil {
+		return ReconResults{}, err
+	}
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	cli := &http.Client{}
+	r, err := cli.Do(req)
+	if err != nil {
+		return ReconResults{}, err
+	}
+
+	if r == nil {
+		return ReconResults{}, errors.New("Recon: HTTP response is empty")
+	}
+
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+
+	type tfResults struct {
+		Filename string
+		Labels   []Recon
+		Err      string `json:"error"`
+	}
+
+	res := tfResults{}
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return ReconResults{}, err
+	}
+	if recErr := res.Err; recErr != "" {
+		return ReconResults{}, errors.New("Recon: " + recErr)
+	}
+
+	recons := ReconResults{res.Labels}
+	return recons, nil
 }
 
 func canonicalUrl(b string, u string) string {
