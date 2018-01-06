@@ -1,4 +1,8 @@
 {
+	"processors": [{
+		"type": "image",
+		"tensorflow_url": "http://localhost:8080/recognize"
+	}],
 	"outputs": [{
 			"type": "elasticsearch",
 			"user": "user",
