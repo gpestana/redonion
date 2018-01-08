@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/gpestana/redonion/fetcher"
-	"github.com/gpestana/redonion/outputs"
+	"github.com/gpestana/redonion/output"
 	"github.com/gpestana/redonion/processors"
 	"io/ioutil"
 	"log"
@@ -42,59 +42,36 @@ func main() {
 		processor.NewImageProcessor(imgChn, outputChn, len(ulist), procCnf),
 	}
 
+	sizeResults := len(ulist) * len(chs)
+	outputs := []output.Output{
+		output.NewEs(cnf.Outputs, outputChn, sizeResults),
+	}
+
 	fetcher, err := fetcher.New(ulist, processors)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// start fetcher
 	fetcher.Start()
 
-	// spin up all processors
 	for _, p := range processors {
 		p.Process()
 	}
 
-	// elasticsearch output config
-	es := outputs.EsOutput{}
-	for _, c := range cnf.Outputs {
-		if c.Type == "elasticsearch" {
-			es, _ = outputs.NewEs(c.User, c.Password, c.Host, c.Index)
-			break
-		}
+	for _, o := range outputs {
+		o.Start()
 	}
 
-	results := []outputs.Unit{}
-	sizeRes := len(ulist) * len(chs)
-	for i := 0; i < sizeRes; i++ {
-		du := <-outputChn
-		r := outputs.Unit{
-			Url:     du.Url,
-			Outputs: du.Outputs,
-		}
-		// add to elasticsearch
-		err := es.Handle(r)
+	// write outputs to stdout
+	for _, o := range outputs {
+		jres, err := o.Results()
 		if err != nil {
 			log.Println(err)
+		} else {
+			os.Stdout.Write(jres)
 		}
-		results = append(results, r)
 	}
-
-	jres, err := json.Marshal(results)
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.Stdout.Write(jres)
 
 	closeChannels(chs, outputChn)
-}
-
-type outputConf struct {
-	Type     string `json:"type"`
-	User     string `json:"user"`
-	Password string `json:"password"`
-	Host     string `json:"host"`
-	Index    string `json:"index"`
 }
 
 type processorsC struct {
@@ -103,7 +80,7 @@ type processorsC struct {
 }
 
 type Config struct {
-	Outputs    []outputConf  `json:"outputs"`
+	Outputs    []output.Conf `json:"outputs"`
 	Processors []processorsC `json:"processors"`
 }
 
