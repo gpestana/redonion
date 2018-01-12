@@ -3,7 +3,6 @@ package tor
 import (
 	"golang.org/x/net/proxy"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -17,13 +16,11 @@ const (
 func Get(u string) ([]byte, error) {
 	proxyURL, err := url.Parse("socks5://" + torProxy)
 	if err != nil {
-		log.Println("Failed to parse proxy URL: " + u)
 		return nil, err
 	}
 
 	dialer, err := proxy.FromURL(proxyURL, proxy.Direct)
 	if err != nil {
-		log.Println("Failed to obtain proxy dialer ", err)
 		return nil, err
 	}
 
@@ -33,15 +30,14 @@ func Get(u string) ([]byte, error) {
 		Timeout:   time.Duration(timeout) * time.Second,
 	}
 	r, err := c.Get(u)
+	//log.Println(err)
 	if err != nil {
-		log.Println("Failed to issue GET request: ", err)
-		return nil, nil
+		return nil, err
 	}
 	defer r.Body.Close()
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Println("Failed to read the body ", err)
 	}
 	return b, nil
 }

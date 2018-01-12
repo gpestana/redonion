@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"flag"
+	"github.com/gpestana/redonion/errors"
 	"github.com/gpestana/redonion/fetcher"
 	"github.com/gpestana/redonion/output"
 	"github.com/gpestana/redonion/processors"
@@ -15,6 +16,7 @@ import (
 
 func main() {
 
+	errs := []errors.Error{}
 	urls := flag.String("urls", "http://127.0.0.1", "list of addresses to scan (separated by comma)")
 	list := flag.String("list", "", "path for list of addresses to scan")
 	c := flag.String("config", "", "path for configuration file")
@@ -47,10 +49,11 @@ func main() {
 		output.NewEs(cnf.Outputs, outputChn, sizeResults),
 	}
 
-	fetcher, err := fetcher.New(ulist, processors)
+	fetcher, err := fetcher.New(ulist, processors, &errs)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	fetcher.Start()
 
 	for _, p := range processors {
@@ -65,13 +68,20 @@ func main() {
 	for _, o := range outputs {
 		jres, err := o.Results()
 		if err != nil {
-			log.Println(err)
+			errs = append(errs, errors.Error{errors.OutputError, err.Error()})
 		} else {
 			os.Stdout.Write(jres)
 		}
 	}
 
 	closeChannels(chs, outputChn)
+	if len(errs) != 0 {
+		for _, e := range errs {
+			e.Print()
+		}
+	} else {
+		log.Println("No errors")
+	}
 }
 
 type processorsC struct {
