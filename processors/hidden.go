@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+const (
+	name = "hidden"
+)
+
 type HiddenProcessor struct {
 	name           string
 	inChannel      chan DataUnit
@@ -23,7 +27,7 @@ type HiddenService struct {
 
 func NewHiddenProcessor(in chan DataUnit, out chan DataUnit, len int) HiddenProcessor {
 	return HiddenProcessor{
-		name:        Name("image"),
+		name:        Name(name),
 		inChannel:   in,
 		outChannel:  out,
 		inputLength: len,

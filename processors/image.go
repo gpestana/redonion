@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/textproto"
 	"strings"
+	"time"
 )
 
 type ImageProcessor struct {
@@ -32,6 +33,7 @@ type Image struct {
 	Exif          map[string]string
 	Recon         ReconResults
 	Errors        []string
+	Timestamp     time.Time
 }
 
 func NewImageProcessor(in chan DataUnit, out chan DataUnit, len int, cnf Config) ImageProcessor {
@@ -89,6 +91,7 @@ func (p ImageProcessor) Process() {
 				Exif:          meta,
 				Recon:         recons,
 				Errors:        errs,
+				Timestamp:     time.Now(),
 			}
 			du.Outputs = append(du.Outputs, i)
 		}
